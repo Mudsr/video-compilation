@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model VideoRequest {
+  id            String   @id @default(cuid())
+  requestId     String   @unique
+  totalFrames   Int
+  framesReceived Int     @default(0)
+  status        String   @default("pending") // pending, processing, completed, failed
+  outputFormat  String   @default("mp4")
+  fps          Int      @default(30)
+  quality      String   @default("medium")
+  videoUrl     String?
+  errorMessage String?
+  compilationTime Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  completedAt  DateTime?
+  
+  frames       Frame[]
+  
+  @@map("video_requests")
+}
+
+model Frame {
+  id           String   @id @default(cuid())
+  requestId    String
+  frameNumber  Int
+  frameUrl     String
+  filename     String
+  uploadedAt   DateTime @default(now())
+  
+  videoRequest VideoRequest @relation(fields: [requestId], references: [requestId])
+  
+  @@unique([requestId, frameNumber])
+  @@map("frames")
+}
