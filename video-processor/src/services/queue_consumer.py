@@ -42,8 +42,12 @@ class QueueConsumer:
             # Set QoS for fair dispatch
             self.channel.basic_qos(prefetch_count=self.prefetch_count)
             
-            # Ensure queue exists
-            self.channel.queue_declare(queue=self.queue_name, durable=True)
+            # Ensure queue exists with same configuration as API service
+            self.channel.queue_declare(
+                queue=self.queue_name, 
+                durable=True,
+                arguments={'x-max-priority': 10}
+            )
             
             logger.info(f"Connected to RabbitMQ queue: {self.queue_name}")
             return True
