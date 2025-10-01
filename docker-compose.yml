@@ -1,0 +1,79 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: video_compilation_rabbitmq
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - video_compilation_network
+
+  minio:
+    image: minio/minio:latest
+    container_name: video_compilation_minio
+    ports:
+      - "9010:9000"      # API port (changed to avoid conflicts)
+      - "9011:9001"      # Console port (changed to avoid conflicts)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - video_compilation_network
+
+  api-service:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: video_compilation_api
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: file:./dev.db
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      NODE_ENV: development
+    depends_on:
+      - rabbitmq
+      - minio
+    volumes:
+      - ./api-service:/app
+      - /app/node_modules
+    networks:
+      - video_compilation_network
+
+  video-processor:
+    build:
+      context: ./video-processor
+      dockerfile: Dockerfile
+    environment:
+      RABBITMQ_URL: amqp://admin:admin123@rabbitmq:5672
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+    depends_on:
+      - rabbitmq
+      - minio
+    volumes:
+      - ./video-processor:/app
+    networks:
+      - video_compilation_network
+    deploy:
+      replicas: 3
+
+volumes:
+  rabbitmq_data:
+  minio_data:
+
+networks:
+  video_compilation_network:
+    driver: bridge
