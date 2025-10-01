@@ -1,4 +1,4 @@
-# Video Compilation System - Interview Assessment
+# Video Compilation System
 
 ## Overview
 
